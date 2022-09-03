@@ -1,0 +1,34 @@
+#!/bin/bash
+
+MONGODUMP_PATH="/usr/bin/mongodump"
+MONGO_HOST="mongo01"
+MONGO_PORT="27017"
+MONGO_DATABASE="optigoclient"
+
+
+TIMESTAMP=`date +%F`
+S3_BUCKET_NAME="beta-vb-mongodb-backup"
+#S3_BUCKET_PATH="mongodb-backups"
+
+#mongodump --host mongo01  --port 27017 --ssl --sslAllowInvalidCertificates  --username test   -d optigoclient
+
+
+# Create backup
+$MONGODUMP_PATH -h $MONGO_HOST:$MONGO_PORT --ssl --sslAllowInvalidCertificates  --username test -d $MONGO_DATABASE  --password 'KM)q****' 
+
+n=0
+until ["$n" -ge 15 ]
+do
+   command && break
+   n=$((n+1))
+   sleep 15
+done
+
+# Add timestamp to backup
+mv dump mongodb-$TIMESTAMP
+tar zcvf  mongodb-$TIMESTAMP.tar.gz  mongodb-$TIMESTAMP
+
+# Upload to S3
+s3cmd put mongodb-$TIMESTAMP.tar.gz  
+s3://$S3_BUCKET_NAME/mongodb-$TIMESTAMP.tar.gz
+rm -rf  mongodb-$TIMESTAMP.tar.gz mongodb-$TIMESTAMP
